@@ -10,22 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      # Step 2: Install dependencies
-      - name: Install dependencies
-        run: |
-          npm install
-
-      # Step 3: Upload SSH private key for EC2
+      # Step 1: Upload SSH private key for EC2
       - name: Upload SSH private key
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
 
-      # Step 4: Deploy to EC2 via SSH
+      # Step 2: Deploy to EC2 via SSH
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
@@ -39,11 +30,11 @@ jobs:
             npm install
 
             # Restart the application (you can use pm2 or systemd, for example)
-            pm2 restart media-server || pm2 start npm --name "your-app-name" -- start
+            pm2 restart media-server || pm2 start npm --name "media-server" -- start
 
           EOF
 
-      # Step 5: Clean up (optional)
+      # Step 3: Clean up (optional)
       - name: Clean up
         run: |
           echo "Deployment completed."
