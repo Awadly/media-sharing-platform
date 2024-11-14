@@ -27,7 +27,7 @@ jobs:
             git pull origin main
 
             # Install any new dependencies
-            npm install
+            sudo npm install
 
             # Restart the application (you can use pm2 or systemd, for example)
             pm2 restart media-server || pm2 start npm --name "media-server" -- start
