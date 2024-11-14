@@ -1,9 +1,17 @@
 import { Request, Response } from "express";
 import config from "../../knexfile";
 import knex from "knex";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const db = knex(config.development);
-
+const s3 = new S3Client({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.accessKeyId,
+    secretAccessKey: process.env.secretAccessKey,
+  },
+});
 // Create media
 export const createMediaHandler = async (req: Request, res: Response) => {
   try {
@@ -117,5 +125,45 @@ export const unlikeMediaHandler = async (req: Request, res: Response) => {
     }
   } catch (error) {
     res.status(500).json({ error: "Failed to unlike media" });
+  }
+};
+
+export const getMediaURL = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { fileName, fileType } = req.query;
+
+    if (
+      !fileName ||
+      !fileType ||
+      typeof fileName !== "string" ||
+      typeof fileType !== "string"
+    ) {
+      res
+        .status(400)
+        .json({ error: "Missing or invalid file name or file type" });
+      return;
+    }
+
+    const bucketName = "mediabucketapp";
+
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: `uploads/${fileName}`,
+      ContentType: fileType,
+    });
+
+    // Generate the pre-signed URL
+    const url = await getSignedUrl(s3, command, { expiresIn: 60 * 10 }); // URL expires in 10 minutes
+
+    res.send({
+      uploadURL: url,
+      fileURL: `https://${bucketName}.s3.amazonaws.com/uploads/${fileName}`,
+    });
+  } catch (err) {
+    console.error("Error generating pre-signed URL", err);
+    res.status(500).json({ error: "Could not generate pre-signed URL" });
   }
 };
