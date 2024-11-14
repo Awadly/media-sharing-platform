@@ -95,7 +95,19 @@ export const deleteMediaHandler = async (req: Request, res: Response) => {
     }
 
     // Extract the S3 key from the file_url (e.g., uploads/filename.ext)
-    const fileKey = media.file_url.split(`${process.env.BUCKET_NAME}/`)[1];
+    const bucketName = process.env.BUCKET_NAME || "mediabucketapp";
+    const fileUrlPrefix = `https://${bucketName}.s3.amazonaws.com/`;
+    const fileKey = media.file_url.startsWith(fileUrlPrefix)
+      ? media.file_url.substring(fileUrlPrefix.length)
+      : null;
+
+    if (!bucketName || !fileKey) {
+      console.error("Bucket name or file key is missing", {
+        bucketName,
+        fileKey,
+      });
+      res.status(500).json({ error: "Bucket name or file key is missing" });
+    }
 
     // Delete the file from S3
     const deleteCommand = new DeleteObjectCommand({
