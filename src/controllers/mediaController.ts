@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
 import config from "../../knexfile";
 import knex from "knex";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const db = knex(config.development);
@@ -83,6 +87,25 @@ export const updateMediaHandler = async (req: Request, res: Response) => {
 export const deleteMediaHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Retrieve media entry to get the file URL
+    const media = await db("media").where({ id }).first();
+    if (!media) {
+      return res.status(404).json({ error: "Media not found" });
+    }
+
+    // Extract the S3 key from the file_url (e.g., uploads/filename.ext)
+    const fileKey = media.file_url.split(`${process.env.BUCKET_NAME}/`)[1];
+
+    // Delete the file from S3
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: process.env.BUCKET_NAME,
+      Key: fileKey,
+    });
+
+    await s3.send(deleteCommand);
+
+    // Delete the media record from the database
     const deletedCount = await db("media").where({ id }).del();
     if (deletedCount) {
       res.status(200).json({ message: "Media deleted successfully" });
@@ -90,6 +113,7 @@ export const deleteMediaHandler = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Media not found" });
     }
   } catch (error) {
+    console.error("Error deleting media", error);
     res.status(500).json({ error: "Failed to delete media" });
   }
 };
