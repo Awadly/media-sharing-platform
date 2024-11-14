@@ -91,7 +91,7 @@ export const deleteMediaHandler = async (req: Request, res: Response) => {
     // Retrieve media entry to get the file URL
     const media = await db("media").where({ id }).first();
     if (!media) {
-      return res.status(404).json({ error: "Media not found" });
+      res.status(404).json({ error: "Media not found" });
     }
 
     // Extract the S3 key from the file_url (e.g., uploads/filename.ext)
