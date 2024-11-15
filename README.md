@@ -14,8 +14,8 @@ This project provides a Node.js backend API for managing media, including upload
 
 1. **Clone the Repository**
    ```bash
-   git clone <repository-url>
-   cd <project-folder>
+   git clone https://github.com/Awadly/media-sharing-platform.git
+   cd media-sharing-platform
    ```
 2. **Install Dependencies**
    Run the following command to install the required dependencies:
