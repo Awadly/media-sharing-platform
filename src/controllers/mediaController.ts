@@ -43,7 +43,9 @@ export const createMediaHandler = async (req: Request, res: Response) => {
 // Get all media
 export const getAllMediaHandler = async (_req: Request, res: Response) => {
   try {
-    const mediaList = await db("media").select("*");
+    const mediaList = await db("media")
+      .select("*")
+      .orderBy("created_at", "desc");
     res.status(200).json(mediaList);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch media list" });
