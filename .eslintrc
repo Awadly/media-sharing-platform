@@ -91,7 +91,7 @@
       "import/no-unused-modules": [2, {
         "unusedExports": true,
         "missingExports": true,
-        "ignoreExports": ["**/*.d.ts"]
+        "src": ["src/**/*.{ts,tsx}"]
       }],
       "import/unambiguous": 2,
       "import/no-commonjs": 2,
@@ -109,7 +109,7 @@
     },
     "overrides": [
       {
-        "files": ["src/**/reducer.ts"],
+        "files": ["src/**/reducer.ts","ecosystem.config.cjs"],
         "rules": {
           "no-param-reassign": ["error", { "props": false }]
         }

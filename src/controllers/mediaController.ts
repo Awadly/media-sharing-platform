@@ -1,21 +1,15 @@
+import { Storage } from "@google-cloud/storage";
 import { Request, Response } from "express";
 import config from "../../knexfile";
 import knex from "knex";
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const db = knex(config.development);
-const s3 = new S3Client({
-  region: "us-east-1",
-  credentials: {
-    accessKeyId: process.env.accessKeyId,
-    secretAccessKey: process.env.secretAccessKey,
-  },
+const storage = new Storage({
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
 });
+const bucketName = process.env.BUCKET_NAME;
+const bucket = storage.bucket(bucketName);
+const db = knex(config.development);
+
 // Create media
 export const createMediaHandler = async (req: Request, res: Response) => {
   try {
@@ -96,9 +90,7 @@ export const deleteMediaHandler = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Media not found" });
     }
 
-    // Extract the S3 key from the file_url (e.g., uploads/filename.ext)
-    const bucketName = process.env.BUCKET_NAME || "mediabucketapp";
-    const fileUrlPrefix = `https://${bucketName}.s3.amazonaws.com/`;
+    const fileUrlPrefix = `https://storage.googleapis.com/${bucketName}/`;
     const fileKey = media.file_url.startsWith(fileUrlPrefix)
       ? media.file_url.substring(fileUrlPrefix.length)
       : null;
@@ -111,13 +103,7 @@ export const deleteMediaHandler = async (req: Request, res: Response) => {
       res.status(500).json({ error: "Bucket name or file key is missing" });
     }
 
-    // Delete the file from S3
-    const deleteCommand = new DeleteObjectCommand({
-      Bucket: process.env.BUCKET_NAME,
-      Key: fileKey,
-    });
-
-    await s3.send(deleteCommand);
+    await bucket.file(fileKey).delete();
 
     // Delete the media record from the database
     const deletedCount = await db("media").where({ id }).del();
@@ -166,42 +152,30 @@ export const unlikeMediaHandler = async (req: Request, res: Response) => {
   }
 };
 
-export const getMediaURL = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getMediaURL = async (req: Request, res: Response): Promise<void> => {
   try {
     const { fileName, fileType } = req.query;
 
-    if (
-      !fileName ||
-      !fileType ||
-      typeof fileName !== "string" ||
-      typeof fileType !== "string"
-    ) {
-      res
-        .status(400)
-        .json({ error: "Missing or invalid file name or file type" });
+    if (!fileName || !fileType || typeof fileName !== "string" || typeof fileType !== "string") {
+      res.status(400).json({ error: "Missing or invalid file name or file type" });
       return;
     }
 
-    const bucketName = "mediabucketapp";
+    const file = bucket.file(`uploads/${fileName}`);
 
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: `uploads/${fileName}`,
-      ContentType: fileType,
+    // Generate signed URL for upload
+    const [url] = await file.getSignedUrl({
+      version: "v4",   
+      action: "write",
+      expires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
-
-    // Generate the pre-signed URL
-    const url = await getSignedUrl(s3, command, { expiresIn: 60 * 10 }); // URL expires in 10 minutes
 
     res.send({
       uploadURL: url,
-      fileURL: `https://${bucketName}.s3.amazonaws.com/uploads/${fileName}`,
+      fileURL: `https://storage.googleapis.com/${bucketName}/uploads/${fileName}`,
     });
   } catch (err) {
-    console.error("Error generating pre-signed URL", err);
-    res.status(500).json({ error: "Could not generate pre-signed URL" });
+    console.error("Error generating signed URL", err);
+    res.status(500).json({ error: "Could not generate signed URL" });
   }
 };

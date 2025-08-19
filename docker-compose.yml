@@ -1,0 +1,34 @@
+services:
+  mysql:
+    image: mysql:lts
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootAwadlyPass2001
+      MYSQL_DATABASE: media_db
+      MYSQL_USER: awadly
+      MYSQL_PASSWORD: Hard2Know@Awadly 
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build: .
+    container_name: backend
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ./key.json:/app/key.json:ro
+    environment:
+      DB_HOST: mysql
+      DB_USER: awadly
+      DB_PASSWORD: Hard2Know@Awadly
+      DB_NAME: media_db
+      GOOGLE_APPLICATION_CREDENTIALS: /app/key.json
+      BUCKET_NAME: media_bucket_awadly
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+
+
+volumes:
+  mysql_data:

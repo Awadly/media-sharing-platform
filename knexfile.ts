@@ -1,12 +1,11 @@
-import { Knex } from "knex";
-import dotenv from "dotenv";
-import path from "path";
+import { type Knex } from 'knex';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
 const config: { [key: string]: Knex.Config } = {
   development: {
-    client: "mysql2",
+    client: 'mysql2',
     connection: {
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
@@ -14,10 +13,10 @@ const config: { [key: string]: Knex.Config } = {
       database: process.env.DB_NAME,
     },
     migrations: {
-      directory: path.join(__dirname, "src/migrations"),
+      directory: './src/migrations',
     },
     seeds: {
-      directory: path.join(__dirname, "src/seeds"),
+      directory: './src/seeds',
     },
   },
 };
