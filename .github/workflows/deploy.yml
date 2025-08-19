@@ -1,4 +1,4 @@
-name: Deploy Node.js App to EC2
+name: Deploy to GCP VM on Push to Main
 
 on:
   push:
@@ -10,31 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Upload SSH private key for EC2
-      - name: Upload SSH private key
+      - name: Start SSH Agent and Add Private Key
         uses: webfactory/ssh-agent@v0.5.3
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-
-      # Step 2: Deploy to EC2 via SSH
-      - name: Deploy to EC2
+          ssh-private-key: ${{ secrets.GCP_PRIVATE_KEY }}
+      - name: Add Host to Known Hosts
         run: |
-          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_PUBLIC_IP }} << 'EOF'
-            # Navigate to your project folder
-            cd ~/media-sharing-platform
-
-            # Pull the latest changes from GitHub
+          ssh-keyscan -H ${{ secrets.GCP_PUBLIC_IP }} >> ~/.ssh/known_hosts
+      - name: SSH into GCP and Pull Latest
+        run: |
+          ssh ${{ secrets.GCP_USER }}@${{ secrets.GCP_PUBLIC_IP }} << 'EOF'
+            cd ~/odoo-nginx/od18
             git pull origin main
-
-            # Install any new dependencies
-            sudo npm install
-
-            # Restart the application (you can use pm2 or systemd, for example)
-            pm2 restart media-server || pm2 start npm --name "media-server" -- start
-
+            sudo docker compose down od18
+            sudo docker compose up -d --build od18
           EOF
-
-      # Step 3: Clean up (optional)
-      - name: Clean up
-        run: |
-          echo "Deployment completed."
